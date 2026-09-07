@@ -13,11 +13,11 @@
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-orange)](./LICENSE)
 [![GUI](https://img.shields.io/badge/GUI-PyQt5-41cd52?logo=qt)](https://pypi.org/project/PyQt5/)
 
-[简体中文](#简体中文) | [English](#english) | 🌐 [项目主页](./website/index.html)
+[简体中文](#简体中文) | [English](#english) | 🌐 [项目主页](./docs/index.html)
 
 </div>
 
-> 📄 **项目介绍主页**：[`website/index.html`](./website/index.html)
+> 📄 **项目介绍主页**：[`docs/index.html`](./docs/index.html)
 > 完整的功能说明、AI 模型清单、GPU 配置需求与已知不足，单文件网页，双击即可打开。
 
 ---
@@ -158,7 +158,7 @@ CourseRecorder/
 │
 ├── ADB/NativeCam/          # 安卓手机端客户端（Java 源码 + 构建脚本）
 ├── assets/                 # Logo 与示例图片
-├── website/                # 项目介绍主页（单文件网页）
+├── docs/                   # 项目介绍主页（GitHub Pages 自动部署，单文件网页）
 ├── tests/                  # 测试脚本
 └── outputs/                # 录制输出（运行时生成，不入库）
 ```
