@@ -13,11 +13,12 @@
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-orange)](./LICENSE)
 [![GUI](https://img.shields.io/badge/GUI-PyQt5-41cd52?logo=qt)](https://pypi.org/project/PyQt5/)
 
-[简体中文](#简体中文) | [English](#english) | 🌐 [项目主页](./docs/index.html)
+[简体中文](#简体中文) | [English](#english) | 🌐 [项目主页](https://tewhac-china.github.io/CourseRecorder/)
 
 </div>
 
-> 📄 **项目介绍主页**：[`docs/index.html`](./docs/index.html)
+> 📄 **项目介绍主页**：[**tewhac-china.github.io/CourseRecorder**](https://tewhac-china.github.io/CourseRecorder/)
+> 完整的功能说明、AI 模型清单、GPU 配置需求与已知不足，单文件网页。
 > 完整的功能说明、AI 模型清单、GPU 配置需求与已知不足，单文件网页，双击即可打开。
 
 ---
@@ -42,11 +43,11 @@ CourseRecorder 是一款面向**课堂/讲座/会议**场景的桌面录制工�
 
 **真实课堂场景** —— 手机摄像头对准投影幕布，实时转写 + 自动提取幻灯片：
 
-![课堂实拍](assets/EffectPicture1.jpg)
+![课堂实拍](docs/EffectPicture1.jpg)
 
 **自动生成的中英对照课堂笔记** —— 幻灯片截图 + 时间戳 + 双语转写：
 
-![生成的笔记](assets/EffectPicture2.jpg)
+![生成的笔记](docs/EffectPicture2.jpg)
 
 ### ✨ 主要功能
 
@@ -239,11 +240,11 @@ CourseRecorder is a desktop tool for **lectures, seminars, and meetings**. Point
 
 **Real classroom** — a phone camera pointed at the screen, live transcription + auto slide extraction:
 
-![Classroom](assets/EffectPicture1.jpg)
+![Classroom](docs/EffectPicture1.jpg)
 
 **Auto-generated bilingual lecture notes** — slide captures + timestamps + dual-language transcript:
 
-![Generated notes](assets/EffectPicture2.jpg)
+![Generated notes](docs/EffectPicture2.jpg)
 
 ### ✨ Features
 
