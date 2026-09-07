@@ -1,0 +1,78 @@
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# ============================================================
+# Runtime artifacts / user data (not committed)
+# ============================================================
+outputs/
+models/
+_tmp/
+_probe/
+_wheels/
+
+# User local config (contains personal paths/ports)
+config.json
+*.local.json
+
+# ============================================================
+# Third-party toolchains (huge, download separately)
+# ============================================================
+ADB/android-sdk/
+ADB/jdk/
+ADB/scrcpy/
+
+# Android client build artifacts (regenerate with build.bat)
+ADB/NativeCam/build/
+ADB/NativeCam/*.apk
+ADB/NativeCam/*.dex
+ADB/NativeCam/*.jar
+ADB/NativeCam/*.idsig
+ADB/NativeCam/*.keystore
+
+# ============================================================
+# IDE / Editor
+# ============================================================
+.vscode/
+.idea/
+.workbuddy/
+*.swp
+*.swo
+
+# ============================================================
+# OS files
+# ============================================================
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ============================================================
+# Logs
+# ============================================================
+*.log

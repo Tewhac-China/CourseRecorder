@@ -1,0 +1,99 @@
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
+
+Copyright (c) 2026 CourseRecorder Contributors
+
+================================================================================
+简体中文摘要 / Chinese Summary（非正式，仅为便于理解；以英文全文为准）
+================================================================================
+
+本项目采用 **知识共享 署名-非商业性使用-相同方式共享 4.0 国际许可协议**
+（CC BY-NC-SA 4.0）授权。您可以：
+
+  ✓ 分享 — 在任何媒介以任何形式复制、发行本作品
+  ✓ 改编 — 重混、转换、基于本作品创作（例如二次开发、修改代码）
+
+但必须遵守以下条件：
+
+  ● 署名 (Attribution)
+    您必须给出适当的署名，提供指向本许可协议的链接，同时标明是否（对原始
+    作品）作了修改。您可以以任何合理方式署名，但不得以任何方式暗示许可人
+    为您或您的使用背书。
+
+  ● 非商业性使用 (NonCommercial)
+    您不得将本作品用于商业目的。
+    —— 即：不得出售本项目、不得将其用于收费服务/产品、不得在企业内部
+       商业培训中作为付费工具链使用等。个人学习、研究、教学（非收费）、
+       非营利组织使用均允许。
+
+  ● 相同方式共享 (ShareAlike)
+    如果您重混、转换或基于本作品创作，您必须基于与原先许可协议相同的
+    许可协议（CC BY-NC-SA 4.0）分发您的贡献。
+
+  ● 无附加限制 (No additional restrictions)
+    您不得适用法律术语或技术措施，从而限制其他人做本许可协议允许的事情。
+
+不提供担保：本作品按其"原样"提供，不含任何明示或暗示的担保。
+
+完整法律条文见：
+  https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.zh-Hans
+  https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+
+================================================================================
+ENGLISH — Full License Reference
+================================================================================
+
+This work is licensed under the
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License
+(CC BY-NC-SA 4.0).
+
+You are free to:
+
+  * Share — copy and redistribute the material in any medium or format
+  * Adapt — remix, transform, and build upon the material
+
+The licensor cannot revoke these freedoms as long as you follow the license terms.
+
+Under the following terms:
+
+  * Attribution — You must give appropriate credit, provide a link to the
+    license, and indicate if changes were made. You may do so in any reasonable
+    manner, but not in any way that suggests the licensor endorses you or your use.
+
+  * NonCommercial — You may not use the material for commercial purposes.
+
+  * ShareAlike — If you remix, transform, or build upon the material, you must
+    distribute your contributions under the same license as the original.
+
+  * No additional restrictions — You may not apply legal terms or technological
+    measures that legally restrict others from doing anything the license permits.
+
+Notices:
+
+  * You do not have to comply with the license for elements of the material in
+    the public domain or where your use is permitted by an applicable exception
+    or limitation.
+
+  * No warranties are given. The license may not give you all of the permissions
+    necessary for your intended use. For example, other rights such as publicity,
+    privacy, or moral rights may limit how you use the material.
+
+Full legal code:
+  https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+
+================================================================================
+第三方组件 / Third-Party Components
+================================================================================
+
+本项目依赖的第三方库（OpenCV、PyQt5、openai-whisper、transformers 等）均遵循
+其各自的开源许可协议，不受本 LICENSE 约束。
+
+构建手机端 APK 所需的 Android SDK 与 JDK 由 Google / Oracle 分别提供，
+遵循其各自的许可条款，本项目仅引用不分发。
+
+Third-party libraries used by this project (OpenCV, PyQt5, openai-whisper,
+transformers, etc.) are subject to their own respective open-source licenses and
+are NOT covered by this LICENSE.
+
+The Android SDK and JDK required to build the phone-side APK are provided by
+Google and Oracle respectively, under their own license terms. This project
+references but does not redistribute them.

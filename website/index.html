@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CourseRecorder · 课堂录课助手</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%230ea5e9'/%3E%3Cstop offset='1' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='112' fill='url(%23g)'/%3E%3Cg stroke='%23fff' stroke-width='38' stroke-linecap='round' fill='none'%3E%3Cpath d='M102 202 L102 102 L202 102'/%3E%3Cpath d='M410 202 L410 102 L310 102'/%3E%3Cpath d='M102 310 L102 410 L202 410'/%3E%3Cpath d='M410 310 L410 410 L310 410'/%3E%3C/g%3E%3Ccircle cx='256' cy='256' r='59' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+/* ============================================================
+   配色系统：清爽现代（天蓝 + 翠绿点缀 / 浅灰底 / 白卡片）
+   ============================================================ */
+:root{
+  --bg:#f5f8fb;
+  --card:#ffffff;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e4eaf2;
+  --brand:#0ea5e9;
+  --brand-d:#0284c7;
+  --brand-soft:#e0f2fe;
+  --accent:#10b981;
+  --accent-soft:#d1fae5;
+  --purple:#8b5cf6;
+  --purple-soft:#ede9fe;
+  --warn:#f59e0b;
+  --warn-soft:#fef3c7;
+  --danger:#ef4444;
+  --danger-soft:#fee2e2;
+  --radius:10px;
+  --shadow:0 1px 2px rgba(15,23,42,.04), 0 4px 16px rgba(15,23,42,.06);
+  --shadow-h:0 2px 4px rgba(15,23,42,.06), 0 12px 28px rgba(15,23,42,.10);
+  --maxw:1140px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg); color:var(--ink);
+  line-height:1.75; -webkit-font-smoothing:antialiased; font-size:15px;
+}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
+a{color:var(--brand-d); text-decoration:none}
+a:hover{text-decoration:underline}
+code,.mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:.88em}
+
+/* ============================ 导航 ============================ */
+.nav{
+  position:sticky; top:0; z-index:50;
+  background:rgba(255,255,255,.9); backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.nav-in{display:flex; align-items:center; justify-content:space-between; height:60px}
+.logo{display:flex; align-items:center; gap:10px; font-weight:700; font-size:17px; letter-spacing:-.2px}
+.logo svg{display:block}
+.nav-links{display:flex; gap:24px; font-size:14px}
+.nav-links a{color:var(--ink-2); font-weight:500}
+.nav-links a:hover{color:var(--brand-d); text-decoration:none}
+@media(max-width:860px){.nav-links{display:none}}
+
+/* ============================ Hero ============================ */
+.hero{
+  padding:78px 0 60px;
+  background:
+    radial-gradient(900px 380px at 10% -10%, var(--brand-soft) 0%, transparent 60%),
+    radial-gradient(760px 340px at 90% 0%, var(--accent-soft) 0%, transparent 62%),
+    var(--card);
+  border-bottom:1px solid var(--line);
+}
+.badge{
+  display:inline-flex; align-items:center; gap:7px;
+  background:var(--card); border:1px solid var(--line);
+  padding:5px 13px; border-radius:999px; font-size:12.5px;
+  color:var(--ink-2); font-weight:500; margin-bottom:20px;
+}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+h1{
+  font-size:clamp(32px,5vw,50px); line-height:1.18; font-weight:800;
+  letter-spacing:-1px; margin-bottom:18px;
+}
+.grad{
+  background:linear-gradient(120deg,var(--brand-d),var(--accent));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+h1 .or{
+  font-size:.58em; font-weight:800; color:var(--brand-d);
+  background:var(--brand-soft); padding:3px 11px; border-radius:7px;
+  vertical-align:middle; margin:0 3px; letter-spacing:0;
+}
+/* 标题下方的效果展示图 */
+.showcase{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr));
+  gap:16px; margin-bottom:30px;
+}
+.shot{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  overflow:hidden; box-shadow:var(--shadow); transition:all .22s ease; margin:0;
+}
+.shot:hover{box-shadow:var(--shadow-h); transform:translateY(-3px)}
+.shot img{display:block; width:100%; height:auto; border-bottom:1px solid var(--line)}
+.shot figcaption{
+  padding:11px 15px; font-size:12.5px; color:var(--ink-2); line-height:1.6;
+}
+.lede{font-size:17px; color:var(--ink-2); max-width:660px; margin-bottom:28px}
+.lede strong{color:var(--ink); font-weight:600}
+.btn-row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:38px}
+.btn{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:11px 22px; border-radius:var(--radius);
+  font-size:14.5px; font-weight:600; border:1px solid transparent; cursor:pointer;
+  transition:all .18s ease;
+}
+.btn-primary{background:var(--brand); color:#fff}
+.btn-primary:hover{background:var(--brand-d); text-decoration:none; transform:translateY(-1px); box-shadow:var(--shadow-h)}
+.btn-ghost{background:var(--card); color:var(--ink); border-color:var(--line)}
+.btn-ghost:hover{border-color:var(--brand); color:var(--brand-d); text-decoration:none}
+
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px}
+.stat{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  padding:16px 18px;
+}
+.stat .n{font-size:24px; font-weight:800; color:var(--brand-d); line-height:1.2}
+.stat .l{font-size:12.5px; color:var(--ink-3); margin-top:2px}
+
+/* ============================ 区块通用 ============================ */
+section{padding:64px 0}
+section.alt{background:var(--card); border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
+.sec-head{max-width:720px; margin-bottom:38px}
+.eyebrow{
+  font-size:12.5px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase;
+  color:var(--brand-d); margin-bottom:10px;
+}
+h2{font-size:clamp(24px,3.4vw,32px); font-weight:800; letter-spacing:-.5px; margin-bottom:12px; line-height:1.3}
+.sec-desc{color:var(--ink-2); font-size:15.5px}
+
+/* ============================ 功能卡片网格 ============================ */
+.grid{display:grid; gap:18px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  padding:24px; transition:all .2s ease;
+}
+.card:hover{border-color:#cfe0f5; box-shadow:var(--shadow-h); transform:translateY(-2px)}
+.ico{
+  width:42px; height:42px; border-radius:9px; display:grid; place-items:center;
+  font-size:20px; margin-bottom:14px;
+}
+.i-blue{background:var(--brand-soft)}
+.i-green{background:var(--accent-soft)}
+.i-purple{background:var(--purple-soft)}
+.i-amber{background:var(--warn-soft)}
+.card h3{font-size:16.5px; font-weight:700; margin-bottom:8px; letter-spacing:-.2px}
+.card p{color:var(--ink-2); font-size:14.5px}
+.card ul{margin:10px 0 0 0; padding-left:18px; color:var(--ink-2); font-size:14px}
+.card li{margin-bottom:4px}
+
+/* ============================ 详解区块 ============================ */
+.detail{
+  display:grid; grid-template-columns:1fr 1fr; gap:36px; align-items:start;
+  padding:30px 0; border-bottom:1px solid var(--line);
+}
+.detail:last-child{border-bottom:none}
+@media(max-width:820px){.detail{grid-template-columns:1fr; gap:20px}}
+.detail.reverse .detail-text{order:2}
+@media(max-width:820px){.detail.reverse .detail-text{order:0}}
+.detail-text h3{font-size:20px; font-weight:700; margin-bottom:10px; letter-spacing:-.3px}
+.detail-text p{color:var(--ink-2); margin-bottom:12px}
+.detail-text ul{padding-left:20px; color:var(--ink-2); font-size:14.5px}
+.detail-text li{margin-bottom:6px}
+.visual{
+  background:linear-gradient(140deg,#f8fbff,#f0f9ff);
+  border:1px solid var(--line); border-radius:var(--radius);
+  padding:22px; min-height:180px;
+}
+.visual .vt{font-size:13px; font-weight:700; color:var(--brand-d); margin-bottom:14px; letter-spacing:.3px}
+.flow{display:flex; flex-direction:column; gap:9px}
+.flow-item{
+  background:var(--card); border:1px solid var(--line); border-radius:8px;
+  padding:10px 14px; font-size:13.5px; color:var(--ink-2);
+  display:flex; align-items:center; gap:10px;
+}
+.flow-item b{color:var(--ink); font-weight:600}
+.step-n{
+  width:20px; height:20px; border-radius:5px; background:var(--brand-soft);
+  color:var(--brand-d); font-size:11.5px; font-weight:800;
+  display:grid; place-items:center; flex-shrink:0;
+}
+
+/* ============================ 表格 ============================ */
+.tbl-wrap{
+  background:var(--card); border:1px solid var(--line);
+  border-radius:var(--radius); overflow:hidden;
+}
+table{width:100%; border-collapse:collapse; font-size:14px}
+thead th{
+  background:#f8fafc; text-align:left; padding:13px 16px;
+  font-size:12.5px; font-weight:700; color:var(--ink-2);
+  letter-spacing:.4px; text-transform:uppercase; border-bottom:1px solid var(--line);
+}
+tbody td{padding:13px 16px; border-bottom:1px solid #f1f5f9; color:var(--ink-2); vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#fafcff}
+td b{color:var(--ink); font-weight:600}
+.tag{
+  display:inline-block; padding:2px 9px; border-radius:5px;
+  font-size:11.5px; font-weight:700; letter-spacing:.2px;
+}
+.t-green{background:var(--accent-soft); color:#047857}
+.t-blue{background:var(--brand-soft); color:var(--brand-d)}
+.t-amber{background:var(--warn-soft); color:#b45309}
+.t-purple{background:var(--purple-soft); color:#6d28d9}
+.t-gray{background:#f1f5f9; color:var(--ink-2)}
+
+/* ============================ 模型致谢 ============================ */
+.ack{
+  background:linear-gradient(135deg,#f8fafc,#f0f9ff);
+  border:1px solid var(--line); border-radius:var(--radius);
+  padding:26px; margin-top:22px;
+}
+.ack h4{font-size:15px; font-weight:700; margin-bottom:12px}
+.ack-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px}
+.ack-item{
+  background:var(--card); border:1px solid var(--line); border-radius:8px; padding:14px 16px;
+}
+.ack-item .an{font-weight:700; font-size:14px; margin-bottom:3px}
+.ack-item .ad{font-size:12.5px; color:var(--ink-2); line-height:1.6}
+
+/* ============================ 不足 ============================ */
+.limits{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:18px}
+.limit{
+  background:var(--card); border:1px solid var(--line);
+  border-left:3px solid var(--warn); border-radius:var(--radius); padding:22px;
+}
+.limit h3{font-size:16px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:9px}
+.limit .lic{font-size:17px}
+.limit p{color:var(--ink-2); font-size:14.5px; margin-bottom:10px}
+.limit .fix{
+  background:#f8fafc; border-radius:7px; padding:10px 13px;
+  font-size:13px; color:var(--ink-2); border:1px solid var(--line);
+}
+.limit .fix b{color:var(--ink)}
+
+/* ============================ 步骤 ============================ */
+.steps{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; counter-reset:s}
+.step{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  padding:22px; position:relative;
+}
+.step .sn{
+  width:30px; height:30px; border-radius:8px;
+  background:linear-gradient(135deg,var(--brand),var(--accent)); color:#fff;
+  display:grid; place-items:center; font-weight:800; font-size:14px; margin-bottom:12px;
+}
+.step h3{font-size:15.5px; font-weight:700; margin-bottom:7px}
+.step p{color:var(--ink-2); font-size:14px}
+.step pre{
+  background:#0f172a; color:#e2e8f0; padding:11px 13px; border-radius:7px;
+  font-family:"SFMono-Regular",Consolas,monospace; font-size:12.5px;
+  margin-top:10px; overflow-x:auto;
+}
+
+/* ============================ 页脚 ============================ */
+footer{background:var(--ink); color:#cbd5e1; padding:44px 0 30px; margin-top:0}
+footer .fw{display:flex; justify-content:space-between; gap:30px; flex-wrap:wrap; align-items:flex-start}
+footer h4{color:#fff; font-size:15px; margin-bottom:10px}
+footer p{font-size:13.5px; line-height:1.8; max-width:520px}
+footer a{color:#7dd3fc}
+.fbot{
+  border-top:1px solid #334155; margin-top:26px; padding-top:18px;
+  font-size:12.5px; color:#94a3b8; text-align:center;
+}
+.lic-box{
+  background:#1e293b; border:1px solid #334155; border-radius:8px;
+  padding:14px 18px; font-size:13px; max-width:340px;
+}
+.lic-box b{color:#fbbf24}
+</style>
+</head>
+<body>
+
+<!-- ============================ 导航 ============================ -->
+<nav class="nav">
+  <div class="wrap nav-in">
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 512 512" aria-hidden="true" style="flex-shrink:0;border-radius:7px">
+        <defs>
+          <linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#0ea5e9"/>
+            <stop offset="1" stop-color="#10b981"/>
+          </linearGradient>
+        </defs>
+        <rect width="512" height="512" rx="112" fill="url(#logo-g)"/>
+        <g stroke="#ffffff" stroke-width="38" stroke-linecap="round" fill="none">
+          <path d="M102 202 L102 102 L202 102"/>
+          <path d="M410 202 L410 102 L310 102"/>
+          <path d="M102 310 L102 410 L202 410"/>
+          <path d="M410 310 L410 410 L310 410"/>
+        </g>
+        <circle cx="256" cy="256" r="59" fill="#ffffff"/>
+      </svg>
+      <span>CourseRecorder</span>
+    </div>
+    <div class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#core">核心能力</a>
+      <a href="#models">AI 模型</a>
+      <a href="#gpu">GPU 需求</a>
+      <a href="#limits">已知不足</a>
+      <a href="#start">快速开始</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============================ Hero ============================ -->
+<header class="hero">
+  <div class="wrap">
+    <div class="badge"><span class="dot"></span> 开源 · 非商用 · 本地运行</div>
+    <h1>
+      一台电脑 + 一个摄像头 or 手机，<br>
+      <span class="grad">搞定整堂课的 PPT 录制与语音转录</span>
+    </h1>
+    <p class="lede">
+      CourseRecorder 是一款面向课堂、讲座与会议的桌面录制工具。把普通摄像头对准投影幕布，
+      它会自动<strong>矫正投影区域</strong>、<strong>提取幻灯片</strong>、<strong>实时转写语音</strong>，
+      并生成带时间戳的<strong>结构化课堂笔记</strong>——全程在本地运行，无需上传任何数据。
+    </p>
+
+    <!-- 标题下方的真实效果展示（图片来自 assets/） -->
+    <div class="showcase">
+      <figure class="shot">
+        <img src="../assets/EffectPicture1.jpg"
+             alt="课堂实拍：摄像头对准投影幕布，软件实时转写并自动提取幻灯片" loading="lazy">
+        <figcaption>📷 真实课堂：摄像头对准幕布，实时转写 + 幻灯片自动提取</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="../assets/EffectPicture2.jpg"
+             alt="自动生成的中英对照课堂笔记，含幻灯片截图、时间戳与双语转写" loading="lazy">
+        <figcaption>📝 自动生成：幻灯片 + 时间戳 + 中英对照笔记</figcaption>
+      </figure>
+    </div>
+
+    <div class="btn-row">
+      <a href="#start" class="btn btn-primary">快速开始 →</a>
+      <a href="#features" class="btn btn-ghost">查看全部功能</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n">4 种</div><div class="l">视频源支持</div></div>
+      <div class="stat"><div class="n">本地</div><div class="l">ASR 转写（不联网）</div></div>
+      <div class="stat"><div class="n">实时</div><div class="l">幻灯片自动提取</div></div>
+      <div class="stat"><div class="n">CC BY-NC</div><div class="l">非商用开源许可</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- ============================ 功能总览 ============================ -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Features</div>
+      <h2>功能总览</h2>
+      <p class="sec-desc">从画面采集到笔记生成，一条流水线覆盖录课的全部环节。</p>
+    </div>
+    <div class="grid g3">
+      <div class="card">
+        <div class="ico i-blue">🎯</div>
+        <h3>投影区域标定与矫正</h3>
+        <p>斜拍的幕布也能"拉正"成正面图，支持三种模式：</p>
+        <ul>
+          <li>自动检测四角</li>
+          <li>手动点击标定（最可靠）</li>
+          <li>逐帧跟踪（画面移动时自动跟随）</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ico i-green">🖼️</div>
+        <h3>幻灯片自动提取</h3>
+        <p>基于感知哈希比对画面，内容变化时才截图。</p>
+        <ul>
+          <li>自动去除重复帧</li>
+          <li>按时间线顺序编号</li>
+          <li>可与转写文字自动对齐</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ico i-purple">🎙️</div>
+        <h3>实时语音转写</h3>
+        <p>本地 ASR 引擎，边录边出文字稿，支持中英等多语言。</p>
+        <ul>
+          <li>FunASR SenseVoice（中文优化）</li>
+          <li>OpenAI Whisper（多语言）</li>
+          <li>可选 CUDA 加速</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ico i-amber">🌏</div>
+        <h3>实时翻译</h3>
+        <p>接入通义千问 Qwen3 小模型，转写后自动译为中文。</p>
+        <ul>
+          <li>INT4 量化，低显存可跑</li>
+          <li>可切换 0.6B / 1.7B 规格</li>
+          <li>可完全关闭以节省资源</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ico i-blue">📝</div>
+        <h3>笔记与多格式输出</h3>
+        <p>一次录制，产出全套课程资料：</p>
+        <ul>
+          <li>Markdown 笔记（原文 + 译文）</li>
+          <li>幻灯片图片序列</li>
+          <li>音视频文件、时间线 JSON</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ico i-green">📹</div>
+        <h3>多视频源接入</h3>
+        <p>不只是摄像头，四种画面来源任选。</p>
+        <ul>
+          <li>USB 外接摄像头</li>
+          <li>笔记本内置摄像头</li>
+          <li>安卓手机（USB 高清投流）</li>
+          <li>本地视频文件</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 核心能力 ============================ -->
+<section id="core" class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">How it works</div>
+      <h2>核心能力详解</h2>
+      <p class="sec-desc">四个环节环环相扣，把"一段录像"变成"一份可检索的课程资料"。</p>
+    </div>
+
+    <div class="detail">
+      <div class="detail-text">
+        <h3>① 投影区域标定与透视矫正</h3>
+        <p>摄像头往往无法正对幕布，直接拍到的画面是梯形。CourseRecorder 会先找到幕布的四个角，
+           再做透视变换，输出一张"正面视角"的清晰图像。</p>
+        <ul>
+          <li><b>自动检测</b>：基于边缘与亮度对比自动定位四角，开箱即用</li>
+          <li><b>手动标定</b>：点击幕布四角，适合自动检测不准的场景（最可靠）</li>
+          <li><b>逐帧跟踪</b>：幕布轻微移动或被遮挡后自动重新锁定</li>
+          <li><b>四角稳定</b>：内置平滑算法，避免角点抖动导致画面跳动</li>
+        </ul>
+      </div>
+      <div class="visual">
+        <div class="vt">处理流程</div>
+        <div class="flow">
+          <div class="flow-item"><span class="step-n">1</span><span>摄像头采集原始画面</span></div>
+          <div class="flow-item"><span class="step-n">2</span><span><b>检测/标定四角</b></span></div>
+          <div class="flow-item"><span class="step-n">3</span><span>透视变换 (WarpPerspective)</span></div>
+          <div class="flow-item"><span class="step-n">4</span><span>输出<b>拉正的正面图</b></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail reverse">
+      <div class="detail-text">
+        <h3>② 幻灯片自动提取</h3>
+        <p>课程中老师会不断翻页。程序持续比对当前画面与上一张已保存的幻灯片，
+           只有当内容<strong>真正发生变化</strong>时才截图保存，避免录下一堆重复图片。</p>
+        <ul>
+          <li><b>感知哈希</b>：对画面缩放去色后计算指纹，抗光照与微小抖动</li>
+          <li><b>自动去重</b>：相似画面不会重复保存</li>
+          <li><b>时间线编号</b>：文件名带时间戳，与转写文稿可对齐回溯</li>
+          <li><b>手动补拍</b>：漏拍时可按键手动提取当前画面</li>
+        </ul>
+      </div>
+      <div class="visual">
+        <div class="vt">判断逻辑</div>
+        <div class="flow">
+          <div class="flow-item"><span class="step-n">1</span><span>矫正后画面</span></div>
+          <div class="flow-item"><span class="step-n">2</span><span>计算感知哈希指纹</span></div>
+          <div class="flow-item"><span class="step-n">3</span><span>与上一张对比差异</span></div>
+          <div class="flow-item"><span class="step-n">4</span><span>差异超阈值 → <b>保存新幻灯片</b></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail">
+      <div class="detail-text">
+        <h3>③ 实时语音转写</h3>
+        <p>音频被切成短窗口送入本地 ASR 模型，转写结果流式追加到时间线，
+           录制结束即得到完整文稿。所有推理都在本机完成，<strong>音频不会上传到任何服务器</strong>。</p>
+        <ul>
+          <li><b>双引擎可选</b>：SenseVoice（中文更快更准）/ Whisper（多语言更强）</li>
+          <li><b>VAD 静音检测</b>：过滤无人说话的片段，减少无效输出</li>
+          <li><b>实时性</b>：数秒窗口滚动转写，录制中即可看到文字</li>
+          <li><b>离线可用</b>：模型下载后完全无需联网</li>
+        </ul>
+      </div>
+      <div class="visual">
+        <div class="vt">音频处理链</div>
+        <div class="flow">
+          <div class="flow-item"><span class="step-n">1</span><span>麦克风 / 系统声音采集</span></div>
+          <div class="flow-item"><span class="step-n">2</span><span>VAD 静音过滤</span></div>
+          <div class="flow-item"><span class="step-n">3</span><span><b>本地 ASR 模型推理</b></span></div>
+          <div class="flow-item"><span class="step-n">4</span><span>追加到时间线 + 实时显示</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail reverse">
+      <div class="detail-text">
+        <h3>④ 笔记生成与输出</h3>
+        <p>录制结束后，幻灯片与转写文字按时间对齐，自动整合成一份结构化 Markdown 笔记；
+           若开启翻译，会同时生成中文译本。</p>
+        <ul>
+          <li><b>notes.md</b>：幻灯片 + 对应转写文字，带时间戳</li>
+          <li><b>notes_translated.md</b>：翻译后的中文笔记</li>
+          <li><b>slides/</b>：按序编号的幻灯片图片</li>
+          <li><b>transcript.jsonl / slides.jsonl</b>：结构化时间线，便于二次开发</li>
+        </ul>
+      </div>
+      <div class="visual">
+        <div class="vt">录制产出</div>
+        <div class="flow">
+          <div class="flow-item"><span class="step-n">📄</span><span><b>notes.md</b> — 原文笔记</span></div>
+          <div class="flow-item"><span class="step-n">🌏</span><span><b>notes_translated.md</b> — 译文笔记</span></div>
+          <div class="flow-item"><span class="step-n">🖼️</span><span><b>slides/</b> — 幻灯片图片序列</span></div>
+          <div class="flow-item"><span class="step-n">🔗</span><span><b>*.jsonl</b> — 时间线数据</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 视频源 ============================ -->
+<section id="sources">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Input sources</div>
+      <h2>支持的视频源</h2>
+      <p class="sec-desc">从十几块的摄像头到闲置的旧手机，都能变成录课设备。</p>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>视频源</th><th>典型分辨率</th><th>适用场景</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>USB 外接摄像头</b></td>
+            <td>1280×720 起</td>
+            <td>固定机位、画质优先</td>
+            <td><span class="tag t-blue">推荐</span> 自动协商 MJPG 格式提升帧率</td>
+          </tr>
+          <tr>
+            <td><b>笔记本内置摄像头</b></td>
+            <td>1280×720 ~ 1080p</td>
+            <td>临时记录、轻量化</td>
+            <td>开箱即用，无需额外设备</td>
+          </tr>
+          <tr>
+            <td><b>安卓手机（USB）</b></td>
+            <td>最高 3264×2448</td>
+            <td><span class="tag t-green">高画质</span> 板书细节要求高</td>
+            <td>通过 adb 投流，需安装手机端 APK</td>
+          </tr>
+          <tr>
+            <td><b>本地视频文件</b></td>
+            <td>取决于源文件</td>
+            <td>事后整理已有录像</td>
+            <td>对已有录播视频做幻灯片提取与转写</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ AI 模型与致谢 ============================ -->
+<section id="models" class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">AI Models & Credits</div>
+      <h2>使用的 AI 模型</h2>
+      <p class="sec-desc">
+        本项目的能力完全建立在优秀的开源模型之上。所有模型均<strong>在本地运行</strong>，
+        不涉及任何云端 API 调用。
+      </p>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>用途</th><th>模型</th><th>体积</th><th>来源</th><th>许可</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>语音转写</b><br><span class="tag t-green">默认推荐</span></td>
+            <td><b>FunASR SenseVoiceSmall</b><br><code>iic/SenseVoiceSmall</code></td>
+            <td>≈ 254 MB</td>
+            <td>阿里巴巴 · 达摩院</td>
+            <td><span class="tag t-blue">Apache-2.0</span></td>
+          </tr>
+          <tr>
+            <td><b>语音转写</b><br><span class="tag t-gray">可选</span></td>
+            <td><b>OpenAI Whisper</b><br><code>tiny / base / small / medium / large</code></td>
+            <td>75 MB ~ 2.9 GB</td>
+            <td>OpenAI</td>
+            <td><span class="tag t-blue">MIT</span></td>
+          </tr>
+          <tr>
+            <td><b>文本翻译</b><br><span class="tag t-purple">可选</span></td>
+            <td><b>通义千问 Qwen3-1.7B</b><br><code>Qwen/Qwen3-1.7B</code>(INT4)</td>
+            <td>≈ 1.5 GB</td>
+            <td>阿里巴巴 · 通义千问</td>
+            <td><span class="tag t-blue">Apache-2.0</span></td>
+          </tr>
+          <tr>
+            <td><b>文本翻译</b><br><span class="tag t-gray">省显存</span></td>
+            <td><b>通义千问 Qwen3-0.6B</b><br><code>Qwen/Qwen3-0.6B</code>(INT4)</td>
+            <td>≈ 700 MB</td>
+            <td>阿里巴巴 · 通义千问</td>
+            <td><span class="tag t-blue">Apache-2.0</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="ack">
+      <h4>🙏 致谢开源社区</h4>
+      <p style="color:var(--ink-2);font-size:14px;margin-bottom:14px">
+        CourseRecorder 只是把这些优秀的开源项目组合在了一起。衷心感谢以下项目及其作者的无私贡献：
+      </p>
+      <div class="ack-grid">
+        <div class="ack-item">
+          <div class="an">FunASR / SenseVoice</div>
+          <div class="ad">阿里巴巴达摩院开源的语音识别工具包与多语言语音理解模型，中文场景表现优异。</div>
+        </div>
+        <div class="ack-item">
+          <div class="an">OpenAI Whisper</div>
+          <div class="ad">通用语音识别模型，多语言鲁棒性强，生态成熟。</div>
+        </div>
+        <div class="ack-item">
+          <div class="an">Qwen3 (通义千问)</div>
+          <div class="ad">阿里云开源的大语言模型系列，本项目使用 INT4 量化的小规格版本做本地翻译。</div>
+        </div>
+        <div class="ack-item">
+          <div class="an">OpenCV</div>
+          <div class="ad">计算机视觉基石库，承担全部图像采集、透视变换与画质处理。</div>
+        </div>
+        <div class="ack-item">
+          <div class="an">PyQt5</div>
+          <div class="ad">跨平台的 Python GUI 框架，构建了本项目的全部界面。</div>
+        </div>
+        <div class="ack-item">
+          <div class="an">HuggingFace Transformers</div>
+          <div class="ad">模型加载与推理的统一接口，配合 bitsandbytes 实现 INT4 量化。</div>
+        </div>
+        <div class="ack-item">
+          <div class="an">imagehash</div>
+          <div class="ad">感知哈希算法实现，用于幻灯片变化的快速比对与去重。</div>
+        </div>
+        <div class="ack-item">
+          <div class="an">webrtcvad</div>
+          <div class="ad">Google 开源的语音活动检测，过滤静音片段提升转写质量。</div>
+        </div>
+        <div class="ack-item">
+          <div class="an">soundcard / PyAudio</div>
+          <div class="ad">跨平台的音频采集库，支持麦克风与系统内录。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ GPU 配置需求 ============================ -->
+<section id="gpu">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Hardware</div>
+      <h2>GPU 配置需求</h2>
+      <p class="sec-desc">
+        转写与翻译是算力大头。下面按使用场景给出参考配置——
+        <strong>没有独立显卡也能用</strong>，只是速度会慢一些。
+      </p>
+    </div>
+
+    <div class="tbl-wrap" style="margin-bottom:20px">
+      <table>
+        <thead>
+          <tr><th>档位</th><th>显卡 / 显存</th><th>转写引擎</th><th>翻译</th><th>预期体验</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>纯 CPU</b></td>
+            <td>无独显 / 核显<br><span class="tag t-amber">内存 ≥ 16GB</span></td>
+            <td>SenseVoiceSmall<br>或 Whisper tiny/base</td>
+            <td>建议关闭，或<br>Qwen3-0.6B (CPU)</td>
+            <td>可用，转写有延迟<br><span class="tag t-amber">适合短时录制</span></td>
+          </tr>
+          <tr>
+            <td><b>入门</b></td>
+            <td>GTX 1650 / MX550<br><span class="tag t-blue">4GB 显存</span></td>
+            <td>Whisper small<br>+ CUDA</td>
+            <td>Qwen3-0.6B<br>INT4</td>
+            <td>转写流畅<br>翻译可选开启</td>
+          </tr>
+          <tr>
+            <td><b>主流</b><br><span class="tag t-green">推荐</span></td>
+            <td>RTX 3050 / 3060<br><span class="tag t-blue">6 ~ 12GB 显存</span></td>
+            <td>SenseVoiceSmall<br>或 Whisper medium</td>
+            <td>Qwen3-1.7B<br>INT4</td>
+            <td><b>转写 + 翻译同时实时</b><br>完整体验</td>
+          </tr>
+          <tr>
+            <td><b>高性能</b></td>
+            <td>RTX 4070 及以上<br><span class="tag t-blue">12GB+ 显存</span></td>
+            <td>Whisper large-v3<br>+ CUDA</td>
+            <td>Qwen3-1.7B<br>INT4</td>
+            <td>最高精度<br>长时录制无压力</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid g2">
+      <div class="card">
+        <h3>📊 各模型显存占用参考</h3>
+        <p style="margin-bottom:12px">实际占用会随音频窗口长度与并发任务浮动：</p>
+        <ul>
+          <li><b>SenseVoiceSmall</b>：约 1 GB 显存（模型本身仅 254 MB）</li>
+          <li><b>Whisper tiny / base</b>：约 1 GB</li>
+          <li><b>Whisper small</b>：约 2 GB</li>
+          <li><b>Whisper medium</b>：约 5 GB</li>
+          <li><b>Whisper large-v3</b>：约 10 GB</li>
+          <li><b>Qwen3-0.6B INT4</b>：约 0.7 GB</li>
+          <li><b>Qwen3-1.7B INT4</b>：约 1.5 GB</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>💡 配置建议</h3>
+        <ul>
+          <li><b>优先保证内存</b>：建议 16GB 起步，模型加载与音频缓冲都吃内存</li>
+          <li><b>先跑起来再升级</b>：默认 SenseVoiceSmall 对硬件最友好，中文课首选</li>
+          <li><b>翻译可关</b>：只需要中文转写时关闭翻译，能省下 1.5GB 显存</li>
+          <li><b>笔记本务必插电</b>：GPU 满载时电池供电会降频，且耗电极快</li>
+          <li><b>显存不足会自动降级</b>：程序检测到显存不够时会自动回退到 CPU 或更小模型</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 已知不足 ============================ -->
+<section id="limits" class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Known limitations</div>
+      <h2>已知不足</h2>
+      <p class="sec-desc">我们选择如实列出当前的短板，避免给你不切实际的预期。</p>
+    </div>
+    <div class="limits">
+      <div class="limit">
+        <h3><span class="lic">🔋</span> 本地运行耗电快</h3>
+        <p>转写与翻译模型会让 CPU/GPU 持续高负载，笔记本电池续航明显缩短，
+           长时间录制时机身发热也比较明显。</p>
+        <div class="fix"><b>缓解：</b>录制时尽量连接电源；关闭翻译功能；
+           改用 SenseVoiceSmall 或 Whisper tiny/base 等轻量模型可显著降低功耗。</div>
+      </div>
+      <div class="limit">
+        <h3><span class="lic">⏳</span> USB 摄像头启动慢</h3>
+        <p>USB 摄像头需要经历 DSHOW 驱动初始化、分辨率与像素格式（MJPG）协商等步骤，
+           从点击"打开摄像头"到出现画面通常需要数秒，切换或重连设备时等待更明显。</p>
+        <div class="fix"><b>缓解：</b>程序已做格式协商与连接状态提示（蓝色待连接 / 黄色连接中 / 绿色已连接）；
+           避免频繁切换视频源；优先使用原生支持 MJPG 的摄像头。</div>
+      </div>
+      <div class="limit">
+        <h3><span class="lic">🎛️</span> 难兼容手动变焦 / EV / ISO</h3>
+        <p>多数廉价 USB 摄像头并未通过 UVC 暴露手动控制接口，OpenCV 无法调节对焦、EV、ISO、增益等参数—
+           这不是程序限制，而是摄像头硬件/驱动本身不支持。</p>
+        <div class="fix"><b>缓解：</b>程序会<strong>自动探测</strong>可用属性与范围，支持的项目（如亮度、对比度、
+           饱和度、色调、曝光）正常调节，<strong>不支持的显示为灰色</strong>并标注原因。</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <h3>其他需要注意的点</h3>
+      <ul>
+        <li><b>平台覆盖</b>：主要在 Windows 10/11 上测试，Linux / macOS 尚未完整验证</li>
+        <li><b>首次模型下载</b>：首次运行会下载数百 MB 至数 GB 的模型文件，请确保网络畅通</li>
+        <li><b>环境依赖</b>：强光直射幕布、幕布与墙面对比度过低时，投影区域检测率会下降，建议手动标定</li>
+        <li><b>录制合规</b>：录制他人课程前请务必获得授课者同意</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 快速开始 ============================ -->
+<section id="start">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Quick start</div>
+      <h2>快速开始</h2>
+      <p class="sec-desc">三步跑起来，无需复杂的环境配置。</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="sn">1</div>
+        <h3>安装依赖</h3>
+        <p>建议使用 Anaconda 创建独立环境（Python 3.9+）。</p>
+        <pre>conda create -n cr python=3.11
+conda activate cr
+pip install -r requirements.txt</pre>
+      </div>
+      <div class="step">
+        <div class="sn">2</div>
+        <h3>启动程序</h3>
+        <p>运行主程序，或直接双击 Windows 启动脚本。</p>
+        <pre>python main.py
+# 或双击 run.bat</pre>
+      </div>
+      <div class="step">
+        <div class="sn">3</div>
+        <h3>开始录制</h3>
+        <p>选择视频源 → 打开摄像头 → （可选）标定投影区域 → 开始录制。</p>
+        <pre>打开摄像头 → 标定投影区域
+→ ● 开始录制 → ■ 停止录制</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 页脚 ============================ -->
+<footer>
+  <div class="wrap">
+    <div class="fw">
+      <div>
+        <h4>CourseRecorder</h4>
+        <p>
+          一款面向课堂与讲座的本地录课工具：投影矫正、幻灯片提取、实时转写与翻译、笔记生成。
+          全程本地运行，数据不出本机。
+        </p>
+      </div>
+      <div class="lic-box">
+        <b>⚖️ 许可协议：CC BY-NC-SA 4.0</b><br>
+        署名 - 非商业性使用 - 相同方式共享。<br>
+        允许个人学习、研究与非营利教学使用；<br>
+        <b>禁止任何商业用途</b>；衍生作品须以相同协议开源。
+      </div>
+    </div>
+    <div class="fbot">
+      <p style="max-width:none;margin:0 auto">
+        ⚠️ 本项目仅供学习交流使用。录制他人授课内容前请务必获得授课者同意，
+        并遵守所在机构规定与当地法律法规。因使用本项目产生的任何纠纷，作者不承担责任。
+      </p>
+      <p style="margin-top:10px;color:#64748b">
+        模型版权归各自所有者所有 · SenseVoice © 阿里巴巴达摩院 · Whisper © OpenAI · Qwen3 © 阿里巴巴通义千问
+      </p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

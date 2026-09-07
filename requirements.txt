@@ -1,0 +1,39 @@
+# ============================================================
+# CourseRecorder 依赖清单
+# 安装：pip install -r requirements.txt
+# ============================================================
+
+# ---- GUI ----
+PyQt5>=5.15
+
+# ---- 图像 / 视频处理 ----
+opencv-python>=4.8
+numpy
+Pillow
+scipy
+imagehash
+
+# ---- 音频采集 ----
+soundcard>=0.4
+pyaudio>=0.2
+soundfile
+webrtcvad
+
+# ---- 语音转写（ASR）----
+# Whisper 引擎（英文/多语言，模型 tiny~large）
+openai-whisper>=20231117
+# SenseVoice 引擎（中文优化，默认推荐，模型 ~254MB）
+# 若安装缓慢可加清华源：-i https://pypi.tuna.tsinghua.edu.cn/simple
+funasr>=1.0.0
+# ModelScope 模型下载（SenseVoice 依赖）
+modelscope>=1.9.0
+
+# ---- 翻译模块（Qwen3 int4 量化）----
+transformers>=4.51.0
+accelerate>=0.25.0
+bitsandbytes>=0.45.0
+sentencepiece>=0.1.99
+protobuf>=4.25.0
+
+# ---- 打包（可选）----
+PyInstaller>=6.0
