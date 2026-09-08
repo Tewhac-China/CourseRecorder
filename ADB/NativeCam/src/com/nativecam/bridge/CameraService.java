@@ -127,6 +127,17 @@ public class CameraService extends Service {
     private volatile String cameraIdPref = null;
     private volatile String activeCameraId = null;
 
+    // ---- 自愈看门狗: 相机链路死亡(断连/卡死/回调丢失)后自动恢复, 无需手动重启 ----
+    // 背景: 相机被系统回收触发 onDisconnected 时旧逻辑只 close 不重启, 流永久死亡;
+    // 个别 HAL 异常时 capture 回调可能永远不触发, 画面同样卡死。
+    private static final long WATCHDOG_INTERVAL_MS = 3000;  // 检查间隔
+    private static final long STALL_TIMEOUT_MS = 8000;      // 超此时长无新帧判定卡死
+    private volatile long lastFrameAtMs = 0;  // 最近收到图像帧的时刻 (elapsedRealtime)
+    private volatile long sessionStartedAtMs = 0; // 会话建立时刻 (streaming 尚无帧时的卡死判定基准)
+    private volatile int autoRecoverCount = 0; // 累计自动恢复次数 (/info 诊断可见)
+    private volatile long nextRecoverAtMs = 0; // 下次允许自动恢复的时刻 (指数退避)
+    private volatile int recoverFailStreak = 0; // 连续恢复失败次数 (streaming 恢复后清零)
+
     private ServerSocket serverSocket;
     private Thread httpThread;
     private volatile boolean running = true;
@@ -142,6 +153,7 @@ public class CameraService extends Service {
         cameraThread = new HandlerThread("NativeCamThread");
         cameraThread.start();
         cameraHandler = new Handler(cameraThread.getLooper());
+        startWatchdog();
         startHttpServer();
         openCamera();
     }
@@ -330,6 +342,9 @@ public class CameraService extends Service {
 
                 @Override
                 public void onDisconnected(CameraDevice cd) {
+                    // 只标记状态, 恢复统一交给看门狗(带退避)。
+                    // 若在此立即重开, 会与 closeCamera/正在销毁的资源竞态,
+                    // 且持续性错误下 onError<->openCamera 快速循环把相机打挂。
                     status = "disconnected";
                     closeCamera();
                 }
@@ -338,13 +353,14 @@ public class CameraService extends Service {
                 public void onError(CameraDevice cd, int error) {
                     status = "error";
                     lastError = "camera error " + error;
-                    // 用户选择的摄像头打开失败 → 回退默认后置
+                    // 用户选择的摄像头打开失败 → 回退默认后置 (一次性, 不循环)
                     if (cameraIdPref != null) {
                         Log.w(TAG, "camera " + cameraIdPref + " onError " + error + ", 回退默认后置");
                         cameraIdPref = null;
                         status = "restarting";
                         cameraHandler.postDelayed(CameraService.this::openCamera, 600);
                     }
+                    // 其余错误不在此重开: 看门狗按退避策略统一恢复
                 }
             }, cameraHandler);
         } catch (SecurityException e) {
@@ -411,6 +427,9 @@ public class CameraService extends Service {
                         fpsN = 0;
                     }
                     status = "streaming";
+                    // 帧心跳: 看门狗据此判断采集链路是否卡死
+                    lastFrameAtMs = android.os.SystemClock.elapsedRealtime();
+                    recoverFailStreak = 0;   // 已恢复流式输出, 重置退避计数
                 } finally {
                     img.close();
                 }
@@ -423,6 +442,7 @@ public class CameraService extends Service {
                         public void onConfigured(CameraCaptureSession s) {
                             captureSession = s;
                             status = "streaming";
+                            sessionStartedAtMs = android.os.SystemClock.elapsedRealtime();
                             lastError = "";
                             Log.i(TAG, "session OK at " + jpegWidth + "x" + jpegHeight);
                             captureLoop();
@@ -817,6 +837,7 @@ public class CameraService extends Service {
                 cam.put("lastAeIso", lastAeIso);
                 cam.put("afState", lastAfState);
                 cam.put("lensState", lastLensState);
+                cam.put("autoRecoverCount", autoRecoverCount);
                 o.put("cam", cam);
                 writeResponse(out, 200, "application/json", o.toString(2).getBytes("UTF-8"));
             } else if ("/cameras".equals(base)) {
@@ -1010,6 +1031,56 @@ public class CameraService extends Service {
             jo.put("active", active);
             arr.put(jo);
         } catch (Exception ignored) {
+        }
+    }
+
+    /** 启动自愈看门狗: 定期检查是否有新帧, 卡死/断连时自动恢复相机。 */
+    private void startWatchdog() {
+        cameraHandler.postDelayed(this::watchdogTick, WATCHDOG_INTERVAL_MS);
+    }
+
+    /**
+     * 看门狗心跳: 覆盖三类"画面卡住"场景 —
+     * 1) capture 回调丢失/HAL 假死: streaming 状态下长时间无新帧 → restartCamera
+     * 2) 相机被系统回收: status 停在 disconnected → openCamera
+     * 3) 相机 HAL 出错未自动恢复: status 停在 error/restarting → openCamera
+     * 恢复失败不会死循环 — 只有状态匹配时才触发, 且每次触发间隔 ≥ 一个检查周期。
+     */
+    private void watchdogTick() {
+        try {
+            if (running) {
+                long now = android.os.SystemClock.elapsedRealtime();
+                boolean streaming = "streaming".equals(status);
+                // 卡死判定基准: 优先用最近帧心跳; 会话建立后从未出帧则用会话建立时刻
+                long baseline = lastFrameAtMs > 0 ? lastFrameAtMs : sessionStartedAtMs;
+                boolean stalled = streaming && baseline > 0
+                        && (now - baseline) > STALL_TIMEOUT_MS;
+                boolean dead = "disconnected".equals(status)
+                        || "error".equals(status)
+                        || "restarting".equals(status);
+                if (stalled || (dead && now >= nextRecoverAtMs)) {
+                    // 指数退避: 3s, 6s, 12s, 24s, 48s, 60s(封顶)。
+                    // 持续性错误(相机被系统禁用等)下不会快速循环打挂相机。
+                    long backoff = Math.min(
+                            3000L << Math.min(recoverFailStreak, 5), 60000L);
+                    nextRecoverAtMs = now + backoff;
+                    recoverFailStreak++;
+                    autoRecoverCount++;
+                    if (stalled) {
+                        Log.w(TAG, "watchdog: no frame for " + (now - baseline)
+                                + "ms -> restartCamera (backoff " + backoff + "ms)");
+                        restartCamera();
+                    } else {
+                        Log.w(TAG, "watchdog: status=" + status
+                                + " -> openCamera (backoff " + backoff + "ms)");
+                        openCamera();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "watchdog error", e);
+        } finally {
+            cameraHandler.postDelayed(this::watchdogTick, WATCHDOG_INTERVAL_MS);
         }
     }
 
