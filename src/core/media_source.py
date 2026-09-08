@@ -392,7 +392,9 @@ class CameraSource(MediaSource):
 
     is_file = False
 
-    _READ_TIMEOUT = 2.0      # 单次 read 超时（秒，用于断流检测）
+    _READ_TIMEOUT = 5.0      # 单次 read 超时（秒，用于断流检测）。
+                             # 高分辨率摄像头(如 2592x1944)采集一帧可能超过 2s,
+                             # 超时过短会误判断流 → 反复重连 → 画面卡住/黑屏。
     _MAX_RECONNECT = 3       # 最大连续重连次数
     _GRAB_FLUSH = 0          # 每次 read 前 grab 的次数（0=直接 read 取最新帧）
     _OPEN_TIMEOUT = 12.0     # 打开+协商超时（秒）。实测外接摄像头打开约 5.6s,

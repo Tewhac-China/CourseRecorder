@@ -744,7 +744,12 @@ class MainWindow(QMainWindow):
                 self.preview_dewarped.set_blackout()
                 self._corners_confirmed = True
                 self.statusbar.showMessage("已选择不启用画面记录 — 仅转录音频")
-            # 切换视频源后同步角点状态（不自动启动预览，等用户手动点击"打开摄像头"）
+            # 切换视频源: 若预览正在运行, 必须用新源重启预览 ——
+            # 否则 PreviewWorker 仍持有旧设备的 cfg, 画面不会变,
+            # 用户必须手动"关闭再打开"才生效(实测确认的问题)。
+            if self._preview_worker is not None:
+                self._start_preview()
+            # 未连接时保持"打开摄像头"待命状态, 不自动启动预览
             manual = self.config.get("manual_corners")
             self._corners_confirmed = bool(manual and len(manual) == 4)
             self._update_ui_state()

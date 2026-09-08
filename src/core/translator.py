@@ -120,10 +120,26 @@ class Translator:
         else:
             models_to_try.append((self.model_name, self.quantize, "cpu"))
 
-        # 逐个尝试加载
-        for name, quant, device in models_to_try:
-            if self._try_load(name, quant, device):
-                return True
+        # 逐个尝试加载（与 ASR 共用串行锁，避免二者同时抢显存/CPU 导致失败）
+        lock = None
+        try:
+            from .model_load_lock import model_load_lock
+            lock = model_load_lock()
+        except Exception:
+            lock = None
+
+        def _attempt_all() -> bool:
+            for name, quant, device in models_to_try:
+                if self._try_load(name, quant, device):
+                    return True
+            return False
+
+        if lock is not None:
+            with lock:
+                if _attempt_all():
+                    return True
+        elif _attempt_all():
+            return True
 
         print("[Translator] 所有模型加载失败")
         return False

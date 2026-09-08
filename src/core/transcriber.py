@@ -459,7 +459,19 @@ class Transcriber:
             )
 
     def load_model(self) -> bool:
-        return self._backend.load()
+        # 与翻译模型共用串行锁: 避免二者同时加载抢显存/CPU 导致加载失败
+        try:
+            from .model_load_lock import model_load_lock
+            with model_load_lock():
+                if self._backend.load():
+                    return True
+                # 首次失败多为资源竞争(如与翻译模型并发/显存未及时释放)，
+                # 短暂等待后重试一次，避免直接导致"录制无法开始"。
+                import time
+                time.sleep(2)
+                return self._backend.load()
+        except Exception:
+            return self._backend.load()
 
     def start(self, callback: Optional[TranscriptCallback] = None) -> bool:
         if not self.load_model():
