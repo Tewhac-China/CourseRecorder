@@ -74,6 +74,8 @@ class PreviewWidget(QLabel):
         self._allow_click = False
         self._draw_interactive_corners = False  # 仅在手动标定模式下为 True
         self._pick_mode = False  # 单点点选模式（对焦/测光区域）
+        self._corner_mode = "draw"  # 角点交互模式: "draw"=点击添加, "move"=拖动微调
+        self._drag_index = -1   # 正在拖动的角点下标 (-1 = 未拖动)
         self._blackout = False  # 黑屏模式：忽略所有 set_image 调用
         self._native_size = True  # 1:1 原始像素显示（不做任何缩放）
         self._connecting = False  # 连接中覆盖层
@@ -164,6 +166,29 @@ class PreviewWidget(QLabel):
         self._corners.clear()
         self.update()
 
+    def reset_corners(self) -> None:
+        """清空全部角点并通知外部(等同重新绘制)。"""
+        self._corners.clear()
+        self._drag_index = -1
+        self.corners_changed.emit(self.get_corners())
+        self.update()
+
+    def set_corner_mode(self, mode: str) -> None:
+        """角点交互模式: "draw"=点击添加新角点, "move"=拖动已有角点微调。"""
+        self._corner_mode = mode if mode in ("draw", "move") else "draw"
+        if self._allow_click and not self._pick_mode:
+            self.setCursor(Qt.OpenHandCursor if self._corner_mode == "move"
+                           else Qt.CrossCursor)
+        self.update()
+
+    def _display_scale(self) -> float:
+        """当前图像到控件的显示缩放比(用于把屏幕像素阈值换算到图像坐标)。"""
+        img_w, img_h = self._raw_size
+        if img_w <= 0 or self._native_size:
+            return 1.0
+        rect = self.contentsRect()
+        return min(rect.width() / img_w, rect.height() / img_h)
+
     def _to_image_coords(self, event: QMouseEvent) -> Tuple[float, float]:
         """把鼠标点击坐标映射回当前显示图像的像素坐标。"""
         img_w, img_h = self._raw_size
@@ -180,6 +205,20 @@ class PreviewWidget(QLabel):
         y = (event.y() - offset_y) / scale
         return max(0.0, min(float(img_w), x)), max(0.0, min(float(img_h), y))
 
+    def _corner_hit(self, x: float, y: float, screen_px: float = 18.0) -> int:
+        """返回点击位置命中的角点下标(无命中返回 -1)。
+
+        screen_px: 屏幕像素容差, 按当前显示缩放换算到图像坐标。
+        """
+        scale = max(self._display_scale(), 1e-6)
+        thr = (screen_px / scale) ** 2
+        best, best_d = -1, float("inf")
+        for i, (cx, cy) in enumerate(self._corners):
+            d = (cx - x) ** 2 + (cy - y) ** 2
+            if d < best_d:
+                best_d, best = d, i
+        return best if best_d <= thr else -1
+
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if self._raw_size[0] == 0:
             super().mousePressEvent(event)
@@ -193,11 +232,40 @@ class PreviewWidget(QLabel):
             super().mousePressEvent(event)
             return
         x, y = self._to_image_coords(event)
+        if self._corner_mode == "move":
+            # 移动模式: 命中已有角点则进入拖动, 未命中不做任何事
+            hit = self._corner_hit(x, y)
+            if hit >= 0:
+                self._drag_index = hit
+                self.setCursor(Qt.ClosedHandCursor)
+            return
+        # 绘制模式(原行为): 点满后再次点击则全部清空重来
         if len(self._corners) >= self.max_corners:
             self._corners.clear()
         self._corners.append((x, y))
         self.corners_changed.emit(self.get_corners())
         self.update()
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        """移动模式下的角点拖动: 实时更新位置并通知外部。"""
+        if 0 <= self._drag_index < len(self._corners):
+            x, y = self._to_image_coords(event)
+            self._corners[self._drag_index] = (x, y)
+            self.corners_changed.emit(self.get_corners())
+            self.update()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if self._drag_index >= 0:
+            self._drag_index = -1
+            if self._allow_click and not self._pick_mode:
+                self.setCursor(Qt.OpenHandCursor if self._corner_mode == "move"
+                               else Qt.CrossCursor)
+            self.corners_changed.emit(self.get_corners())
+            self.update()
+            return
+        super().mouseReleaseEvent(event)
 
     def paintEvent(self, event) -> None:
         if self._image is None:

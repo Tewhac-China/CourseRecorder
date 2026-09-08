@@ -18,6 +18,7 @@ import cv2
 import numpy as np
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtWidgets import (
+    QButtonGroup,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -197,6 +198,26 @@ class CornerCalibrationDialog(QDialog):
         controls.addWidget(self.btn_aspect_43)
         layout.addLayout(controls)
 
+        # ---- 手动标定工具: 绘制/移动模式切换 + 重置角点 ----
+        self.btn_draw_mode = QPushButton("✏ 绘制角点")
+        self.btn_draw_mode.setCheckable(True)
+        self.btn_draw_mode.setChecked(True)
+        self.btn_draw_mode.setToolTip("绘制模式：在画面上点击添加新角点")
+        self.btn_move_mode = QPushButton("✥ 移动角点")
+        self.btn_move_mode.setCheckable(True)
+        self.btn_move_mode.setToolTip("移动模式：拖动已有角点微调位置")
+        self.btn_reset_corners = QPushButton("↺ 重置角点")
+        self.btn_reset_corners.setToolTip("清空全部角点，从头重新绘制")
+        for b in (self.btn_draw_mode, self.btn_move_mode,
+                  self.btn_reset_corners):
+            b.setEnabled(False)   # 仅手动标定模式下可用
+        tools = QHBoxLayout()
+        tools.addWidget(self.btn_draw_mode)
+        tools.addWidget(self.btn_move_mode)
+        tools.addWidget(self.btn_reset_corners)
+        tools.addStretch()
+        layout.addLayout(tools)
+
         buttons = QHBoxLayout()
         buttons.addStretch()
         self.btn_confirm = QPushButton("确认")
@@ -217,6 +238,16 @@ class CornerCalibrationDialog(QDialog):
         self.btn_confirm.clicked.connect(self._on_confirm)
         self.btn_cancel.clicked.connect(self.reject)
         self.preview.corners_changed.connect(self._on_corners_changed)
+        # 绘制/移动模式自锁互斥
+        self._corner_mode_group = QButtonGroup(self)
+        self._corner_mode_group.addButton(self.btn_draw_mode)
+        self._corner_mode_group.addButton(self.btn_move_mode)
+        self._corner_mode_group.setExclusive(True)
+        self.btn_draw_mode.toggled.connect(
+            lambda on: on and self.preview.set_corner_mode("draw"))
+        self.btn_move_mode.toggled.connect(
+            lambda on: on and self.preview.set_corner_mode("move"))
+        self.btn_reset_corners.clicked.connect(self._on_reset_corners)
         # 复用主预览流的信号（不再自建 CalibrationWorker）
         if self._worker is not None:
             self._worker.frame_ready.connect(self._on_frame)
@@ -291,10 +322,20 @@ class CornerCalibrationDialog(QDialog):
                 self._worker.set_tracking(False)
                 self._worker.set_corners(None)
             self.preview.allow_corner_selection(True)
-            self.status_label.setText("请在画面上依次点击屏幕的 4 个角")
+            # 启用绘制/移动/重置工具, 默认进入绘制模式
+            for b in (self.btn_draw_mode, self.btn_move_mode,
+                      self.btn_reset_corners):
+                b.setEnabled(True)
+            self.btn_draw_mode.setChecked(True)
+            self.preview.set_corner_mode("draw")
+            self.status_label.setText("绘制模式：点击画面添加 4 个角；"
+                                      "切到“移动角点”可拖动微调")
             self.btn_confirm.setEnabled(False)
         else:
             self.preview.allow_corner_selection(False)
+            for b in (self.btn_draw_mode, self.btn_move_mode,
+                      self.btn_reset_corners):
+                b.setEnabled(False)
 
     # ── 逐帧跟踪
     def _on_tracking_toggled(self, checked):
@@ -319,7 +360,20 @@ class CornerCalibrationDialog(QDialog):
             if self._worker:
                 self._worker.set_corners(self._pending_corners)
             self.btn_confirm.setEnabled(True)
-            self.status_label.setText("已标定 4 个角点")
+            self.status_label.setText("已标定 4 个角点（可切“移动角点”拖动微调）")
+        else:
+            # 角点被清空（重置角点）→ 同步清空待确认状态
+            self._pending_corners = None
+            if self._worker:
+                self._worker.set_corners(None)
+            if self._mode == "manual":
+                self.btn_confirm.setEnabled(False)
+                self.status_label.setText("已清空角点，请重新绘制")
+
+    # ── 重置角点
+    def _on_reset_corners(self):
+        self._pending_corners = None
+        self.preview.reset_corners()   # emit corners_changed([]) → 上面的清空逻辑
 
     # ── 确认 / 取消
     def _on_confirm(self):
