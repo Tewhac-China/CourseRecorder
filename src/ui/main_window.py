@@ -986,33 +986,78 @@ class MainWindow(QMainWindow):
             self._update_ui_state()
 
 
+    def _make_temp_preview_worker(self):
+        """暂停录制时，为标定对话框临时创建一个预览 worker。
+
+        暂停期间主预览已停止（_preview_worker 为 None，摄像头由录制器持有），
+        但标定需要实时画面，因此临时起一个 worker；标定结束后由调用方
+        stop() 并把摄像头归还录制器（acquire_camera）。
+        """
+        cfg = self._current_video_cfg()
+        if cfg is None:
+            return None
+        resolution_mode = self.config.get("camera_resolution_mode", "max")
+        w = PreviewWorker(
+            cfg, resolution_mode,
+            target_aspect=self.config.projection_aspect_ratio, parent=self,
+        )
+        manual = self.config.get("manual_corners")
+        if manual and len(manual) == 4:
+            w.set_corners(np.array(manual, dtype=np.float32))
+        w.start()   # 不阻塞等首帧：标定对话框会自行等 frame_ready 信号显示画面
+        return w
+
     def _on_calibrate(self) -> None:
         if self.recorder.state() in ("starting", "recording"):
             QMessageBox.warning(self, "提示", "录制中无法设置角点，请先暂停或停止录制")
             return
-        if self._preview_worker is None:
-            QMessageBox.warning(self, "提示", "请先打开摄像头预览")
+
+        is_paused = (self.recorder.state() == "paused")
+        temp_worker = None
+
+        if is_paused:
+            # 暂停态：让出摄像头 → 等驱动释放 → 临时预览供标定取流
+            self.recorder.release_camera()
+            import time; time.sleep(0.3)
+            temp_worker = self._make_temp_preview_worker()
+            worker = temp_worker
+        else:
+            if self._preview_worker is None:
+                QMessageBox.warning(self, "提示", "请先打开摄像头预览")
+                return
+            # 空闲态：复用主预览流（不停止/重启摄像头 → 秒开且不会闪退）
+            worker = self._preview_worker
+
+        if worker is None:
+            # 预览没起来：暂停态要把摄像头赶紧还给录制器
+            if is_paused:
+                self.recorder.acquire_camera()
+            QMessageBox.warning(self, "提示", "无法打开预览画面，请重试")
             return
 
-        # 复用主预览流：直接把 worker 传给标定对话框，不停止/重启摄像头
-        # → 标定窗口秒开，确认不闪退
-        from .corner_calibration import CornerCalibrationDialog
-        dlg = CornerCalibrationDialog(self.config, self._preview_worker, parent=self)
-        if dlg.exec_() == QDialog.Accepted:
-            corners = dlg.get_confirmed_corners()
-            if corners is not None:
-                self.recorder._manual_corners = corners
-                self.recorder._use_manual_corners = True
+        try:
+            from .corner_calibration import CornerCalibrationDialog
+            dlg = CornerCalibrationDialog(self.config, worker, parent=self)
+            if dlg.exec_() == QDialog.Accepted:
+                corners = dlg.get_confirmed_corners()
+                if corners is not None:
+                    self.recorder._manual_corners = corners
+                    self.recorder._use_manual_corners = True
+                else:
+                    self.recorder._manual_corners = None
+                    self.recorder._use_manual_corners = False
+                self._corners_confirmed = True
+                self.statusbar.showMessage("角点已确认")
             else:
-                self.recorder._manual_corners = None
-                self.recorder._use_manual_corners = False
-            self._corners_confirmed = True
-            self.statusbar.showMessage("角点已确认")
-        else:
-            manual = self.config.get("manual_corners")
-            self._corners_confirmed = bool(manual and len(manual) == 4)
-        # 标定结果统一交给状态机刷新
-        self._update_ui_state()
+                manual = self.config.get("manual_corners")
+                self._corners_confirmed = bool(manual and len(manual) == 4)
+        finally:
+            if temp_worker is not None:
+                temp_worker.stop()
+                # 等驱动完全释放后再把设备交还录制器
+                import time; time.sleep(0.3)
+                self.recorder.acquire_camera()
+            self._update_ui_state()
 
     def _select_nativecam_item(self) -> None:
         """静默选中手机摄像头下拉项（不触发 _on_video_changed 的自动连接）。"""
