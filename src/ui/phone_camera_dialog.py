@@ -45,6 +45,7 @@ class PhoneCameraDialog(QDialog):
         self._last_setcam_ms = 0.0
         self._focus_max = 20.0  # 最大屈光度（从设备读取后更新）
         self._ev_min, self._ev_max = -6, 6
+        self._ev_step = 1.0 / 3.0  # 每档 EV 步长（从设备 /info evStep 读取后更新）
         self._iso_min, self._iso_max = 100, 6400
 
         self.setWindowTitle("手机摄像头配置")
@@ -102,7 +103,7 @@ class PhoneCameraDialog(QDialog):
         row_ev.addWidget(self.lbl_ev)
         lay_ev.addLayout(row_ev)
 
-        hint_ev = QLabel("0=自动基准 | 左拉=欠曝 | 右拉=过曝")
+        hint_ev = QLabel("0=自动基准 | 左拉=欠曝 | 右拉=过曝（EV 需自动曝光 AE 才生效）")
         hint_ev.setStyleSheet("color: #888; font-size: 10px;")
         lay_ev.addWidget(hint_ev)
         root.addWidget(grp_ev)
@@ -167,8 +168,20 @@ class PhoneCameraDialog(QDialog):
     def _on_ev_changed(self, value: int):
         if self._updating_from_server:
             return
-        self.lbl_ev.setText(str(value))
+        self.lbl_ev.setText(self._ev_text(value))
         self._send_setcam(f"ev={value}")
+
+    def _ev_text(self, idx: int) -> str:
+        """把 EV 索引换算为用户易懂的 EV 值（索引 × 步长）。
+
+        Camera2 的 CONTROL_AE_EXPOSURE_COMPENSATION 用的是"档位索引"
+        （如 -20..20），真实 EV = 索引 × CONTROL_AE_COMPENSATION_STEP
+        （常见 1/3 EV）。直接显示索引会让用户误以为是 ±20 EV。
+        """
+        try:
+            return f"{idx * float(self._ev_step):+.1f}EV"
+        except Exception:
+            return str(idx)
 
     def _on_iso_changed(self, progress: int):
         if self._updating_from_server:
@@ -232,12 +245,19 @@ class PhoneCameraDialog(QDialog):
             self._focus_max = float(fmax)
         ev_min = cam.get("evMin", -6)
         ev_max = cam.get("evMax", 6)
+        ev_step = cam.get("evStep", 1.0 / 3.0)
         iso_min = cam.get("isoMin", 100)
         iso_max = cam.get("isoMax", 6400)
         if ev_min != self._ev_min or ev_max != self._ev_max:
             self._ev_min, self._ev_max = ev_min, ev_max
             if not self.slider_ev.isSliderDown():
                 self.slider_ev.setRange(ev_min, ev_max)
+        try:
+            st = float(ev_step)
+            if st > 0:
+                self._ev_step = st
+        except Exception:
+            pass
         if iso_min > 0 and iso_max > iso_min:
             if iso_min != self._iso_min or iso_max != self._iso_max:
                 self._iso_min, self._iso_max = iso_min, iso_max
@@ -266,7 +286,7 @@ class PhoneCameraDialog(QDialog):
             # EV
             if not self.slider_ev.isSliderDown():
                 self.slider_ev.setValue(ev)
-                self.lbl_ev.setText(str(ev))
+                self.lbl_ev.setText(self._ev_text(ev))
 
             # ISO
             if not self.slider_iso.isSliderDown():

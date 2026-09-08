@@ -110,6 +110,9 @@ public class CameraService extends Service {
     private volatile int lastAeIso = 0;
     // 设备能力范围 (openCamera 时读取, -1 = 不支持)
     private volatile int evMin = 0, evMax = 0;
+    // EV 每档对应的实际曝光值 (CONTROL_AE_COMPENSATION_STEP, 常见 1/3 或 1/2 EV)。
+    // /info 上报给 PC 端, 用于把索引值换算成用户易懂的 EV (如 -18 档 × 1/3 = -6.0 EV)。
+    private volatile double evStep = 1.0 / 3.0;
     private volatile int isoMin = -1, isoMax = -1;
     private volatile float focusMin = 0f, focusMax = 0f;  // 对焦距离范围 (屈光度)
 
@@ -237,6 +240,16 @@ public class CameraService extends Service {
                 }
             } catch (Exception ignored) {
                 evMin = evMax = 0;
+            }
+            try {
+                android.util.Rational st = cc.get(
+                        CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP);
+                if (st != null && st.getDenominator() != 0) {
+                    double d = st.doubleValue();
+                    if (d > 0) evStep = d;
+                }
+            } catch (Exception ignored) {
+                evStep = 1.0 / 3.0;   // 兜底: 多数设备为 1/3 EV 一档
             }
             try {
                 android.util.Range<Integer> isoR = cc.get(
@@ -793,6 +806,7 @@ public class CameraService extends Service {
                 cam.put("focusMax", focusMax);
                 cam.put("evMin", evMin);
                 cam.put("evMax", evMax);
+                cam.put("evStep", evStep);
                 cam.put("isoMin", isoMin);
                 cam.put("isoMax", isoMax);
                 cam.put("lastAeExposureNs", lastAeExposureNs);
@@ -1288,7 +1302,21 @@ public class CameraService extends Service {
                     evIndex = null;
                     applied.append("ev=auto ");
                 } else {
-                    evIndex = Integer.parseInt(v.trim());
+                    int idx = Integer.parseInt(v.trim());
+                    // 钳制到设备支持范围（CONTROL_AE_COMPENSATION_RANGE），
+                    // 超出范围的值会被 HAL 静默忽略 → 表现为"调了没反应"。
+                    if (evMin != 0 || evMax != 0) {
+                        idx = Math.max(evMin, Math.min(evMax, idx));
+                    }
+                    evIndex = idx;
+                    // EV 仅在 AE 自动模式下生效。若当前处于手动曝光
+                    // (ae=off，例如先前设过手动 ISO)，必须切回自动，否则 EV 无效。
+                    if (aeMode == CameraMetadata.CONTROL_AE_MODE_OFF) {
+                        aeMode = CameraMetadata.CONTROL_AE_MODE_ON;
+                        exposureNs = null;
+                        iso = null;
+                        applied.append("ae=auto(iso=auto, EV requires AE) ");
+                    }
                     applied.append("ev=").append(evIndex).append(" ");
                 }
             }
