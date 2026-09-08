@@ -449,8 +449,12 @@ public class CameraService extends Service {
     private void captureLoop() {
         if (cameraDevice == null || captureSession == null || !running) return;
         try {
+            // 用录像模板(RECORD)而非拍照模板(STILL_CAPTURE):
+            // 拍照模板为静态照片优化, 曝光更充分/画面更亮(保留暗部、快门偏慢),
+            // 与原生相机 App 的预览观感明显不一致(同 EV/ISO 下本 App 偏亮)。
+            // 录像模板的曝光策略更接近实时预览且持续采集时稳定。
             CaptureRequest.Builder b =
-                    cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+                    cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
             b.addTarget(jpegReader.getSurface());
             b.set(CaptureRequest.JPEG_QUALITY, (byte) jpegQuality);
             b.set(CaptureRequest.JPEG_ORIENTATION, 0);
