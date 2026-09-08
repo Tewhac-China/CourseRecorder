@@ -395,7 +395,8 @@ class CameraSource(MediaSource):
     _READ_TIMEOUT = 2.0      # 单次 read 超时（秒，用于断流检测）
     _MAX_RECONNECT = 3       # 最大连续重连次数
     _GRAB_FLUSH = 0          # 每次 read 前 grab 的次数（0=直接 read 取最新帧）
-    _OPEN_TIMEOUT = 8.0      # 打开+协商超时（秒），USB 摄像头初始化可能较慢
+    _OPEN_TIMEOUT = 12.0     # 打开+协商超时（秒）。实测外接摄像头打开约 5.6s,
+                             # 留足余量避免偶发波动(驱动复位慢/系统负载)导致误判超时。
 
     def __init__(
         self,

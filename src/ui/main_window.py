@@ -1554,6 +1554,11 @@ class MainWindow(QMainWindow):
             self.preview_dewarped.set_connecting(False)
             self.statusbar.showMessage(f"⚠ {msg} — 请检查手机 USB 连接后重试")
             return
+        # 连接失败必须立即把按钮从"连接中"复位 —— 否则用户会一直看到黄色
+        # "连接中"停在原地(此前正是这样: 失败后按钮永不复位, 看起来像卡死)。
+        # 自动修复成功时 _start_preview() 会重新进入 connecting → on。
+        self._set_camera_toggle_state("off")
+        self.preview_dewarped.set_connecting(False)
         self.statusbar.showMessage(f"⚠ {msg} — 正在检测冲突...")
         # 在后台线程执行检测和修复，避免阻塞 UI
         threading.Thread(target=self._try_auto_fix_camera, daemon=True).start()
